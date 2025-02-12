@@ -7,6 +7,7 @@ from app import crud
 from app.schemas import PipelineCreate, PipelineStatus
 from app.tasks import pipeline_orchestrator
 
+# Create a router for pipeline-related endpoints
 router = APIRouter()
 
 @router.post("/pipeline", response_model=PipelineStatus)
@@ -37,10 +38,12 @@ def get_pipeline_status(job_id: UUID, db: Session = Depends(get_db)):
     """
     Retrieve the current status and result for a pipeline job.
     """
+    # Fetch the job from the database
     job = crud.get_pipeline_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    # Return the job status and result  
     return PipelineStatus(
         job_id=job.job_id,
         status=job.status,

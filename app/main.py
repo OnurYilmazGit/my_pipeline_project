@@ -19,6 +19,7 @@ app = FastAPI(title=settings.APP_NAME)
 # Include routers
 app.include_router(pipeline.router)
 
+# Root endpoint
 @app.get("/")
 def read_root():
     return {"message": "Welcome to My Pipeline Project"}
