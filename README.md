@@ -4,12 +4,28 @@ This repository provides a **FastAPI** web application that launches an **asynch
 
 ---
 
+## Table of Contents
+
+1. [Overview & Features](#1-overview--features)
+2. [How It Meets the Assignment Requirements](#2-how-it-meets-the-assignment-requirements)
+3. [Project Structure](#3-project-structure)
+4. [Setup & Quickstart](#4-setup--quickstart)
+5. [Usage](#5-usage)
+6. [Testing](#6-testing)
+7. [Frontend (Optional)](#7-frontend-optional)
+8. [Versioning & Migrations](#8-versioning--migrations)
+9. [Technical Details](#9-technical-details)
+10. [Future Improvements](#10-future-improvements)
+11. [Conclusion](#conclusion)
+
+---
+
 ## 1. **Overview & Features**
 
 1. **FastAPI** app with two main endpoints:
    - `POST /pipeline`: Creates a new pipeline job in the DB, triggers Celery tasks.
    - `GET /pipeline/{job_id}`: Retrieves the current status and partial/final results.
-2. **Celery** tasks chained together (e.g., “add 5,” “multiply by 2,” “subtract 10”).
+2. **Celery** tasks chained together (e.g., "add 5," "multiply by 2," "subtract 10").
 3. **PostgreSQL** database storing:
    - Job ID (`UUID`)
    - Job status (`pending`, `in_progress`, `completed`, `error`)
@@ -44,7 +60,7 @@ This repository provides a **FastAPI** web application that launches an **asynch
    - SQLAlchemy models and CRUD operations (`create_pipeline_job`, `update_pipeline_job`, etc.).
 
 4. **Task Flow & Status Updates**  
-   - On `POST /pipeline`, we insert a “job” record, set `status="in_progress"`.  
+   - On `POST /pipeline`, we insert a "job" record, set `status="in_progress"`.  
    - Each Celery task updates the DB record with partial or final results, or `error` on exception.
 
 5. **Deploy / Docker**  
@@ -152,7 +168,7 @@ my_pipeline_project/
   ```bash
   docker-compose run --rm web pytest
   ```
-  You’ll see:
+  You'll see:
 
   ```text
   collected 1 item
@@ -201,7 +217,7 @@ You can add a minimal **React** (or other) frontend that calls `/pipeline` and d
 ## 10. **Future Improvements**
 
 - **Enhanced Logging**: Use [logging.config.dictConfig](https://docs.python.org/3/library/logging.config.html) for more structured logs.  
-- **Retry Logic**: Celery’s `autoretry_for` for transient failures (e.g., external API calls).  
+- **Retry Logic**: Celery's `autoretry_for` for transient failures (e.g., external API calls).  
 - **Auth & Security**: Add OAuth2 or API keys if needed in production.  
 - **Async DB**: Use `async SQLAlchemy` if fully async is desired.  
 - **Kubernetes**: Provide Helm charts or K8s manifests for production scaling.
