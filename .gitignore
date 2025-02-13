@@ -1,0 +1,94 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+env/
+venv/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Pytest
+.cache
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Environments
+.env
+.env.*
+
+# IDEs and Editors
+# JetBrains
+.idea/
+*.iml
+# VS Code
+.vscode/
+# Sublime Text
+*.sublime-workspace
+# Eclipse
+.project
+.settings/
+# Vim
+*.swp
+# Emacs
+*~
+
+# Logs
+*.log
+
+# Build directories
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+*.egg-info
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
