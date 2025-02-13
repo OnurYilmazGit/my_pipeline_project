@@ -1,75 +1,108 @@
 import logging
-from uuid import UUID
-
+import uuid
+import requests
 from celery import chain
 from app.celery_app import celery_app
 from app.database import SessionLocal
-from app.crud import update_pipeline_job
+from app.crud import update_pipeline_job, get_pipeline_job
 
-# Set up logging for the tasks
 logger = logging.getLogger(__name__)
 
 @celery_app.task(bind=True)
-def step_add_5(self, value: int) -> int:
+def step_pull_external_api(self, input_val: int) -> dict:
     """
-    Step A: Adds 5 to the input integer.
+    Step A: Pull from an external API using the integer input.
+    In this example, we call JSONPlaceholder's /todos/{id} endpoint.
+    Returns the external data as a dictionary.
     """
-    logger.info("Adding 5 to %d", value)
-    return value + 5
+    url = f"https://jsonplaceholder.typicode.com/todos/{input_val}"
+    logger.info("Fetching external API from %s", url)
+
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        logger.info("External API data: %s", data)
+        return data  # pass this to next step
+    except Exception as e:
+        logger.error("Error pulling external API: %s", e)
+        raise e
 
 @celery_app.task(bind=True)
-def step_multiply_2(self, value: int, job_id: str) -> int:
+def step_store_data(self, external_data: dict, job_id: str) -> str:
     """
-    Step B: Multiply the incoming value by 2, then store a partial result in DB.
+    Step B: Generate a new UUID, store the external data in DB under 'data_uuid'
+    in the 'result' field, so we can retrieve it later.
+    Returns the new UUID (as a string) for the next step.
     """
-    result = value * 2
-    logger.info("Multiplying result by 2: %d -> %d", value, result)
+    new_uuid = str(uuid.uuid4())
+    logger.info("Storing external_data under UUID=%s for job=%s", new_uuid, job_id)
 
-    # Save partial result to the database
     db = SessionLocal()
-    update_pipeline_job(db, job_id, result={"partial": result})
-    db.close()
+    try:
+        update_pipeline_job(
+            db,
+            job_id,
+            result={
+                "data_uuid": new_uuid,
+                "external_data": external_data
+            }
+        )
+    finally:
+        db.close()
 
-    return result
+    return new_uuid
 
 @celery_app.task(bind=True)
-def step_subtract_10(self, value: int, job_id: str) -> dict:
+def step_final_retrieve(self, data_uuid: str, job_id: str) -> dict:
     """
-    Step C: Subtract 10, update the record status to 'completed', store final result.
+    Step C: Retrieve from DB by job_id, parse the 'data_uuid' & 'external_data',
+    finalize job => status='completed', store final JSON.
     """
-    final_value = value - 10
-    logger.info("Subtracting 10: %d -> %d", value, final_value)
+    logger.info("Final retrieve for job=%s, data_uuid=%s", job_id, data_uuid)
 
-    # Update job status and store final result in the database
     db = SessionLocal()
-    updated_job = update_pipeline_job(
-        db, 
-        job_id, 
-        status="completed",
-        result={"final_result": final_value}
-    )
-    db.close()
+    try:
+        job_record = get_pipeline_job(db, job_id)
+        if not job_record or not job_record.result:
+            raise ValueError("No result stored for this job yet")
 
-    return {"final_result": final_value, "job_id": str(job_id)}
+        # The external data we stored in step B:
+        ext_data = job_record.result.get("external_data")
+        # For demonstration, let's do a "final" transform or just store it as is
+        final_data = {
+            "final_data": ext_data,
+            "uuid": data_uuid
+        }
+
+        update_pipeline_job(
+            db,
+            job_id,
+            status="completed",
+            result=final_data
+        )
+
+        return final_data
+    finally:
+        db.close()
 
 @celery_app.task(bind=True)
 def pipeline_orchestrator(self, initial_value: int, job_id: str):
     """
-    Master Orchestrator Task:
-    If an error occurs immediately, mark job as 'error'.
-    Otherwise chain the tasks step_add_5, step_multiply_2, step_subtract_10.
+    Orchestrates the chain of tasks:
+      1) step_pull_external_api
+      2) step_store_data
+      3) step_final_retrieve
     """
     try:
-        # Chain tasks to execute them sequentially
         workflow = chain(
-            step_add_5.s(initial_value),
-            step_multiply_2.s(job_id),
-            step_subtract_10.s(job_id)
+            step_pull_external_api.s(initial_value),
+            step_store_data.s(job_id),
+            step_final_retrieve.s(job_id)
         )
         workflow.apply_async()
     except Exception as e:
         logger.error("Pipeline orchestrator error: %s", str(e))
-        # Update job status to 'error' in case of failure
         db = SessionLocal()
         update_pipeline_job(db, job_id, status="error", result={"error": str(e)})
         db.close()

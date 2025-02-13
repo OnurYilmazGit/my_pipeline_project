@@ -20,7 +20,11 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         # Constructs the database URL using the provided PostgreSQL settings
-        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return (
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:"
+            f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
+            f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
 
     class Config:
         # Specifies the environment file to load variables from

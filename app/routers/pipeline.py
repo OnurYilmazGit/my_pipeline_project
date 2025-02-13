@@ -13,18 +13,12 @@ router = APIRouter()
 @router.post("/pipeline", response_model=PipelineStatus)
 def create_pipeline(payload: PipelineCreate, db: Session = Depends(get_db)):
     """
-    1. Create a pipeline job in DB with status='pending'.
-    2. Immediately update status to 'in_progress'.
-    3. Launch the Celery orchestrator task (pipeline_orchestrator).
-    4. Return job_id for tracking.
+    1) Create a new DB record with status='pending'
+    2) Mark it as 'in_progress'
+    3) Kick off the Celery chain
     """
-    # Create a new DB record
     job = crud.create_pipeline_job(db)
-    
-    # Update status to 'in_progress'
     updated_job = crud.update_pipeline_job(db, job.job_id, status="in_progress")
-
-    # Kick off the Celery orchestrator asynchronously
     pipeline_orchestrator.delay(payload.initial_value, str(updated_job.job_id))
 
     return PipelineStatus(
@@ -38,12 +32,9 @@ def get_pipeline_status(job_id: UUID, db: Session = Depends(get_db)):
     """
     Retrieve the current status and result for a pipeline job.
     """
-    # Fetch the job from the database
     job = crud.get_pipeline_job(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-
-    # Return the job status and result  
     return PipelineStatus(
         job_id=job.job_id,
         status=job.status,
